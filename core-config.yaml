@@ -35,7 +35,7 @@ spec:
       - name: gradle-package
         image: docker.io/gradle:7.3.1-jdk11
         script: |
-          gradle build -d
+          gradle build
           cp build/libs/$JAR_NAME $(workspaces.core-workspace.path)/$JAR_NAME
         env: 
           - name: JAR_NAME
