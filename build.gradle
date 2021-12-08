@@ -15,8 +15,12 @@ configurations {
 
 repositories {
     maven {
-        url "http://localhost:18080/repository/maven-public/"
+        url "http://localhost:8081/repository/maven-public/"
         allowInsecureProtocol = true
+		credentials {
+    		username= 'admin'
+    		password= '123'
+		}
     }
     mavenCentral()
 }
