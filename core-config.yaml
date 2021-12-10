@@ -51,7 +51,7 @@ spec:
           buildah push --tls-verify=false --storage-driver=vfs $IMG_URL:$IMG_VERSION docker://$IMG_URL:$IMG_VERSION
         env:
           - name: IMG_URL
-            value: tmaxcloudck/bookinfo-core
+            value: core.hr.172.22.11.16.nip.io/shinhan-bookinfo/bookinfo-core
           - name: IMG_VERSION
             value: latest
           - name: JAR_NAME
