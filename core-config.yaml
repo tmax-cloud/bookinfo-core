@@ -41,25 +41,30 @@ spec:
           - name: JAR_NAME
             value : core.jar
         when:
-          branch:
-            - main
+          tag:
+            - v.*
       - name: build-and-push
         image: quay.io/buildah/stable
         script: |
+          IMG_TAG=${CI_HEAD_REF#refs/tags/}
+
           cp $(workspaces.core-workspace.path)/$JAR_NAME ./
-          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f Dockerfile -t $IMG_URL:$IMG_VERSION .
-          buildah push --tls-verify=false --storage-driver=vfs $IMG_URL:$IMG_VERSION docker://$IMG_URL:$IMG_VERSION
+          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f Dockerfile -t $IMG_URL:$IMG_TAG .
+          buildah login -u $HARBOR_USER -p $HARBOR_PASS core.hr.172.22.11.16.nip.io
+          buildah push --tls-verify=false --storage-driver=vfs $IMG_URL:$IMG_TAG docker://$IMG_URL:$IMG_TAG
         env:
           - name: IMG_URL
             value: core.hr.172.22.11.16.nip.io/shinhan-bookinfo/bookinfo-core
-          - name: IMG_VERSION
-            value: latest
           - name: JAR_NAME
             value: core.jar
+          - name: HARBOR_USER
+            value: admin
+          - name: HARBOR_PASS
+            value: admin
         securityContext:
           privileged: true
         after:
           - gradle-package
         when:
-          branch:
-            - main
+          tag:
+            - v.*
