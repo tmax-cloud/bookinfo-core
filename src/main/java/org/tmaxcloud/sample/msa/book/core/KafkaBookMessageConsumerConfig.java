@@ -14,13 +14,14 @@ import java.util.Map;
 
 @Configuration
 public class KafkaBookMessageConsumerConfig {
-
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${spring.kafka.consumer.group-id}")
+    private String groupId;
+
     @Bean
     public ConsumerFactory<String, BookMessage> bookMessageConsumer() {
-
         // FIXME: temporary implements for error caused by
         //  "The class 'org.tmaxcloud.sample.msa.book.order.BookMessage' is not in the trusted packages"
         JsonDeserializer<BookMessage> deserializer = new JsonDeserializer<>(BookMessage.class);
@@ -30,7 +31,7 @@ public class KafkaBookMessageConsumerConfig {
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        configs.put(ConsumerConfig.GROUP_ID_CONFIG, "book");
+        configs.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 
         return new DefaultKafkaConsumerFactory<>(
                 configs,
