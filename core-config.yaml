@@ -17,7 +17,7 @@ metadata:
 spec:
   git:
     type: github
-    apiUrl: 
+    apiUrl: ""
     repository: tmax-cloud/bookinfo-core
     token:
       valueFrom:
@@ -32,39 +32,41 @@ spec:
     - name : tmaxcloudck-docker-hub-secret
   jobs:
     postSubmit:
-      - name: gradle-package
-        image: docker.io/gradle:7.3.1-jdk11
-        script: |
-          gradle build
-          cp build/libs/$JAR_NAME $(workspaces.core-workspace.path)/$JAR_NAME
+      - name: s2i-gradle-generate
+        image: docker.io/tmaxcloudck/cicd-util:5.0.5
         env: 
           - name: JAR_NAME
             value : core.jar
         when:
           tag:
             - v.*
+        script: |
+          /usr/local/bin/s2i \
+          build . docker.io/changjjjjjjjj/s2i-gradle-java:dev \
+          --env JAR_NAME=$JAR_NAME \
+          --tlsverify=false \
+          --as-dockerfile $(workspaces.core-workspace.path)/Dockerfile.gen
       - name: build-and-push
         image: quay.io/buildah/stable
         script: |
           IMG_TAG=${CI_HEAD_REF#refs/tags/}
 
-          cp $(workspaces.core-workspace.path)/$JAR_NAME ./
-          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f Dockerfile -t $IMG_URL:$IMG_TAG .
-          buildah login --tls-verify=false -u $HARBOR_USER -p $HARBOR_PASS core.hr.172.22.11.16.nip.io
-          buildah push --tls-verify=false --storage-driver=vfs $IMG_URL:$IMG_TAG docker://$IMG_URL:$IMG_TAG
+          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f $(workspaces.core-workspace.path)/Dockerfile.gen -t $REGISTRY_URL/$IMG_PATH:$IMG_TAG $(workspaces.core-workspace.path)
+          buildah login --tls-verify=false -u $REG_USER -p $REG_PASS $REGISTRY_URL
+          buildah push --tls-verify=false --storage-driver=vfs $REGISTRY_URL/$IMG_PATH:$IMG_TAG docker://$REGISTRY_URL/$IMG_PATH:$IMG_TAG
         env:
-          - name: IMG_URL
-            value: core.hr.172.22.11.16.nip.io/shinhan-bookinfo/bookinfo-core
-          - name: JAR_NAME
-            value: core.jar
-          - name: HARBOR_USER
+          - name: REGISTRY_URL
+            value: core.hr.172.22.11.16.nip.io
+          - name: IMG_PATH
+            value: shinhan-bookinfo/bookinfo-core
+          - name: REG_USER
             value: admin
-          - name: HARBOR_PASS
+          - name: REG_PASS
             value: admin
         securityContext:
           privileged: true
         after:
-          - gradle-package
+          - s2i-gradle-generate
         when:
           tag:
             - v.*
