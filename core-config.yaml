@@ -50,7 +50,7 @@ spec:
 
           cp $(workspaces.core-workspace.path)/$JAR_NAME ./
           buildah bud --tls-verify=false --storage-driver=vfs --format docker -f Dockerfile -t $IMG_URL:$IMG_TAG .
-          buildah login -u $HARBOR_USER -p $HARBOR_PASS core.hr.172.22.11.16.nip.io
+          buildah login --tls-verify=false -u $HARBOR_USER -p $HARBOR_PASS core.hr.172.22.11.16.nip.io
           buildah push --tls-verify=false --storage-driver=vfs $IMG_URL:$IMG_TAG docker://$IMG_URL:$IMG_TAG
         env:
           - name: IMG_URL
