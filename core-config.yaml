@@ -191,3 +191,21 @@ spec:
         when:
           tag:
             - v.*
+      - name: image-scann
+        image: docker.io/bitnami/trivy:latest
+        script: |
+          IMG_TAG=${CI_HEAD_REF#refs/tags/}
+
+          TRIVY_INSECURE=true trivy image $REGISTRY_URL/$IMG_PATH:$IMG_TAG
+        env:
+          - name: REGISTRY_URL
+            value: core.hr.172.22.11.16.nip.io
+          - name: IMG_PATH
+            value: shinhan-bookinfo/bookinfo-core
+        securityContext:
+          privileged: true
+        after:
+          - build-and-push
+        when:
+          tag:
+            - v.*
