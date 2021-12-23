@@ -2,6 +2,7 @@ plugins {
     id 'org.springframework.boot' version '2.6.1'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
+    id 'org.sonarqube' version '3.3'
 }
 
 group = 'com.tmaxcloud.sample.msa.book'
@@ -10,6 +11,23 @@ version = '0.0.1-SNAPSHOT'
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
+    }
+}
+
+sonarqube {
+    properties {
+        property "sonar.host.url", "http://sonarqube.172.22.11.16.nip.io"
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.login", "admin"
+        property "sonar.password", "tmax@23"
+        property "sonar.projectKey", "core-sonar"
+        property "sonar.language", "java"
+        property "sonar.sources", "src/main/java"
+        property "sonar.java.binaries", "build/classes/java/main"
+        property "sonar.java.libraries", "build/libs"
+        property "sonar.tests", "src/test"
+        property "sonar.java.test.binaries", "build/classes/java/test"
+        property "sonar.junit.reportPaths", "build/reports/tests"
     }
 }
 
