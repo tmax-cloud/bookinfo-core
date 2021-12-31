@@ -4,13 +4,12 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.tmaxcloud.sample.msa.book.common.dto.BookDto;
 import org.tmaxcloud.sample.msa.book.common.dto.BookDetailDto;
 import org.tmaxcloud.sample.msa.book.common.dto.RatingDto;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,15 +25,14 @@ public class BookController {
     @Value("${upstream.rating}")
     private String ratingSvcAddr;
 
-    final
-    RestTemplate restTemplate;
+    private final WebClient webClient;
 
     private final ModelMapper modelMapper;
 
-    BookController(BookRepository repository, ModelMapper modelMapper, RestTemplate restTemplate) {
+    BookController(BookRepository repository, ModelMapper modelMapper, WebClient webClient) {
         this.repository = repository;
         this.modelMapper = modelMapper;
-        this.restTemplate = restTemplate;
+        this.webClient = webClient;
     }
 
     @GetMapping("/books")
@@ -51,20 +49,19 @@ public class BookController {
     }
 
     @GetMapping("/books/{id}")
-    BookDetailDto one(@PathVariable Long id) {
+    BookDetailDto findOne(@PathVariable Long id) {
         Book book = repository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException(id));
-
-        ResponseEntity<RatingDto> response = restTemplate.getForEntity(ratingSvcAddr + "/api/rating/{id}", RatingDto.class, id);
-        if (HttpStatus.OK != response.getStatusCode()) {
-            log.error("failed to get rating");
-        }
-        return convertToDetailDto(book).setRating(response.getBody().getScore());
+        RatingDto response = webClient.get()
+                .uri(ratingSvcAddr + "/api/rating/"+id)
+                .retrieve()
+                .bodyToMono(RatingDto.class)
+                .block();
+        return convertToDetailDto(book).setRating(response.getScore());
     }
 
     @PutMapping("/books/{id}")
     BookDto replaceBook(@RequestBody Book newBook, @PathVariable Long id) {
-
         return repository.findById(id)
                 .map(book -> {
                     book.setTitle(newBook.getTitle());
@@ -78,15 +75,20 @@ public class BookController {
     }
 
     @PutMapping("/books/{id}/rating")
-    BookDto evaluateBook(@RequestBody String score, @PathVariable Long id) {
+    BookDto evaluateBooks(@RequestBody String score, @PathVariable Long id) {
         Book book = repository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
-        ResponseEntity<RatingDto> response = restTemplate.postForEntity(
-                ratingSvcAddr + "/api/rating", new RatingDto().setBookId(id).setScore(Float.parseFloat(score)), RatingDto.class);
+        RatingDto newRating = new RatingDto().setBookId(id).setScore(Float.parseFloat(score));
 
-        if (HttpStatus.OK != response.getStatusCode()) {
+        Mono<RatingDto> response = webClient.post()
+                .uri(ratingSvcAddr + "/api/rating")
+                .bodyValue(newRating)
+                .retrieve()
+                .bodyToMono(RatingDto.class);
+        response.subscribe(res -> {
+            log.info("succeed to set rating score for book:{}", id);
+        }, e -> {
             log.warn("failed to set rating score for book:{}", id);
-        }
-
+        });
         return convertToDto(book);
     }
 

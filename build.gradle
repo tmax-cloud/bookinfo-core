@@ -58,6 +58,7 @@ dependencies {
     implementation 'io.opentracing.contrib:opentracing-spring-jaeger-cloud-starter:3.3.1'
     implementation 'org.tmaxcloud.sample.msa.book:common:0.0.1'
     implementation 'org.modelmapper:modelmapper:2.3.5'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
