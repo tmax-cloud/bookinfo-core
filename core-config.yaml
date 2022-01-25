@@ -88,153 +88,256 @@ data:
   sonar-project.properties: "# required metdata\nsonar.projectKey=sonar-test\nsonar.login=admin\nsonar.projectVersion=0.1\nsonar.sourceEncoding=UTF-8\n
     sonar.password=tmax@23\nsonar.sources=src/main/java/\nsonar.language=java\nsonar.java.binaries=src/main/java"
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
+apiVersion: tmax.io/v1
+kind: ClusterTemplate
 metadata:
-  name: core-pvc
-spec:
-  resources:
-    requests:
-      storage: 1Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
+  name: gradle-image-integrationconfig-template
+parameters:
+  - name: CONFIG_NAME
+    displayName: ConfigName
+    description: Integration Config Name
+    required: true
+    valueType: string
+  - name: CONFIG_SECRET
+    displayName: ConfigSecret
+    description: Secret to be included in Service Account (Usually docker hub secret)
+    required: false
+    valueType: string
+  - name: GIT_TYPE
+    displayName: GitType
+    description: Git repo type (github/gitlab)
+    required: true
+    valueType: string
+  - name: GIT_API_URL
+    displayName: GitApiUrl
+    description: Git repo API Server URL
+    required: false
+    value: ""
+    valueType: string
+  - name: GIT_REPO
+    displayName: GitRepo
+    description: Git repo path (ex. tmax-cloud/bookinfo-common)
+    required: true
+    valueType: string
+  - name: TOKEN_SECRET_NAME
+    displayName: TokenSecretName
+    description: Name of secret containing token info
+    required: true
+    valueType: string
+  - name: PVC_NAME
+    displayName: PVCName
+    description: PVC Name
+    requierd: true
+    valueType: string
+  - name: SONAR_HOST_URL_TPL
+    displayName: SonarHostURL
+    description: URL of sonarqube
+    required: true
+    valueType: string
+  - name: SONAR_PROJECT_KEY_TPL
+    displayName: SonarProjectKey
+    description: Sonar project key. If not defined, use default sonar property.
+    required: false
+    valueType: string
+  - name: JAR_NAME
+    displayName: JarName
+    description: Target Jar Name
+    required: true
+    valueType: string
+  - name: REGISTRY_URL
+    displayName: RegistryURL
+    description: Registry URL
+    required: true
+    valueType: string
+  - name: IMG_PATH
+    displayName: ImagePath
+    description: Image Path
+    required: true
+    valueType: string
+  - name: REG_USER
+    displayName: RegUser
+    description: Registry User Name
+    required: true
+    valueType: string
+  - name: REG_PASS
+    displayName: RegPass
+    description: Registry password
+    required: true
+    valueType: string
+objects:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: ${PVC_NAME}
+    spec:
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+      accessModes:
+        - ReadWriteOnce
+  - apiVersion: cicd.tmax.io/v1
+    kind: IntegrationConfig
+    metadata:
+      name: ${CONFIG_NAME}
+    spec:
+      git:
+        type: ${GIT_TYPE}
+        apiUrl: ${GIT_API_URL}
+        repository: ${GIT_REPO}
+        token:
+          valueFrom:
+            secretKeyRef:
+              name: ${TOKEN_SECRET_NAME}
+              key: token
+      workspaces:
+        - name: bookinfo-workspace
+          persistentVolumeClaim:
+            claimName: ${PVC_NAME}
+        - name: sonar-settings
+          configMap:
+            name: sonar-properties
+      secrets:
+        - name: ${CONFIG_SECRET}
+      mergeConfig:
+        method: squash
+        query:
+          approveRequired: true
+          blockLabels:
+            - hold
+          checks:
+            - prepare-sonar
+            - code-analysis
+      jobs:
+        preSubmit:
+          - name: prepare-sonar
+            image: docker.io/alpine:3.13.6
+            script: |
+              cp -r ./src $(workspaces.bookinfo-workspace.path)/src
+            when:
+              branch:
+                - main
+          - name: code-analysis
+            tektonTask:
+              taskRef:
+                local:
+                  name: sonarqube-scanner
+                  kind: Task
+              params:
+                - name: SONAR_HOST_URL
+                  stringVal: ${SONAR_HOST_URL_TPL}
+                - name: SONAR_PROJECT_KEY
+                  stringVal: ${SONAR_PROJECT_KEY_TPL}
+              workspaces:
+                - name: source-dir
+                  workspace: bookinfo-workspace
+                - name: sonar-settings
+                  workspace: sonar-settings
+            after:
+              - copy-source
+            when:
+              branch:
+                - main
+        postSubmit:
+          - name: copy-source
+            image: docker.io/alpine:3.13.6
+            script: |
+              cp -r ./src $(workspaces.bookinfo-workspace.path)/src
+            when:
+              branch:
+                - main
+          - name: code-analysis
+            tektonTask:
+              taskRef:
+                local:
+                  name: sonarqube-scanner
+                  kind: Task
+              params:
+                - name: SONAR_HOST_URL
+                  stringVal: ${SONAR_HOST_URL_TPL}
+                - name: SONAR_PROJECT_KEY
+                  stringVal: ${SONAR_PROJECT_KEY_TPL}
+              workspaces:
+                - name: source-dir
+                  workspace: bookinfo-workspace
+                - name: sonar-settings
+                  workspace: sonar-settings
+            after:
+              - copy-source
+            when:
+              branch:
+                - main
+          - name: s2i-gradle-generate
+            image: docker.io/tmaxcloudck/cicd-util:5.0.5
+            when:
+              tag:
+                - v.*
+            script: |
+              /usr/local/bin/s2i \
+              build . docker.io/changjjjjjjjj/s2i-gradle-java:dev \
+              --env JAR_NAME=${JAR_NAME} \
+              --tlsverify=false \
+              --as-dockerfile $(workspaces.bookinfo-workspace.path)/Dockerfile.gen
+          - name: build-and-push
+            image: quay.io/buildah/stable
+            script: |
+              IMG_TAG=${CI_HEAD_REF#refs/tags/}
+              buildah bud --tls-verify=false --storage-driver=vfs --format docker -f $(workspaces.bookinfo-workspace.path)/Dockerfile.gen -t ${REGISTRY_URL}/${IMG_PATH}:$IMG_TAG $(workspaces.bookinfo-workspace.path)
+              buildah login --tls-verify=false -u ${REG_USER} -p ${REG_PASS} ${REGISTRY_URL}
+              buildah push --tls-verify=false --storage-driver=vfs ${REGISTRY_URL}/${IMG_PATH}:${IMG_TAG} docker://${REGISTRY_URL}/${IMG_PATH}:$IMG_TAG
+            securityContext:
+              privileged: true
+            after:
+              - s2i-gradle-generate
+            when:
+              tag:
+                - v.*
+          - name: image-scan
+            image: docker.io/bitnami/trivy:latest
+            script: |
+              IMG_TAG=${CI_HEAD_REF#refs/tags/}
+              TRIVY_INSECURE=true trivy image ${REGISTRY_URL}/${IMG_PATH}:${IMG_TAG}
+            securityContext:
+              privileged: true
+            after:
+              - build-and-push
+            when:
+              tag:
+                - v.*
 ---
-apiVersion: cicd.tmax.io/v1
-kind: IntegrationConfig
+apiVersion: tmax.io/v1
+kind: TemplateInstance
 metadata:
-  name: bookinfo-core-config
+  name: bookinfo-rating-ic-instance
+  namespace: default
 spec:
-  git:
-    type: github
-    apiUrl: ""
-    repository: tmax-cloud/bookinfo-core
-    token:
-      valueFrom:
-        secretKeyRef:
-          name: yxzzzxh-git-token
-          key: token
-  workspaces:
-    - name : core-workspace
-      persistentVolumeClaim:
-        claimName: core-pvc
-    - name: sonar-settings
-      configMap:
-        name: sonar-properties
-  secrets:
-    - name : tmaxcloudck-docker-hub-secret
-  jobs:
-    preSubmit:
-      - name: copy-source
-        image: docker.io/alpine:3.13.6
-        script: |
-          cp -r ./src $(workspaces.core-workspace.path)/src
-        when:
-          branch: 
-          - main
-      - name: code-analysis
-        tektonTask:
-          taskRef:
-            local:
-              name: sonarqube-scanner
-              kind: Task
-          params:
-          - name: SONAR_HOST_URL
-            stringVal: http://sonarqube.172.22.11.16.nip.io
-          - name: SONAR_PROJECT_KEY
-            stringVal: core-sonar
-          workspaces:
-          - name: source-dir
-            workspace: core-workspace
-          - name: sonar-settings
-            workspace: sonar-settings
-        after:
-        - copy-source
-        when:
-          branch: 
-          - main
-    postSubmit:
-      - name: copy-source
-        image: docker.io/alpine:3.13.6
-        script: |
-          cp -r ./src $(workspaces.core-workspace.path)/src
-        when:
-          branch: 
-          - main
-      - name: code-analysis
-        tektonTask:
-          taskRef:
-            local:
-              name: sonarqube-scanner
-              kind: Task
-          params:
-          - name: SONAR_HOST_URL
-            stringVal: http://sonarqube.172.22.11.16.nip.io
-          - name: SONAR_PROJECT_KEY
-            stringVal: core-sonar
-          workspaces:
-          - name: source-dir
-            workspace: core-workspace
-          - name: sonar-settings
-            workspace: sonar-settings
-        after:
-        - copy-source
-        when:
-          branch: 
-          - main
-      - name: s2i-gradle-generate
-        image: docker.io/tmaxcloudck/cicd-util:5.0.5
-        env: 
-          - name: JAR_NAME
-            value : core.jar
-        when:
-          tag:
-            - v.*
-        script: |
-          /usr/local/bin/s2i \
-          build . docker.io/changjjjjjjjj/s2i-gradle-java:dev \
-          --env JAR_NAME=$JAR_NAME \
-          --tlsverify=false \
-          --as-dockerfile $(workspaces.core-workspace.path)/Dockerfile.gen
-      - name: build-and-push
-        image: quay.io/buildah/stable
-        script: |
-          IMG_TAG=${CI_HEAD_REF#refs/tags/}
-
-          buildah bud --tls-verify=false --storage-driver=vfs --format docker -f $(workspaces.core-workspace.path)/Dockerfile.gen -t $REGISTRY_URL/$IMG_PATH:$IMG_TAG $(workspaces.core-workspace.path)
-          buildah login --tls-verify=false -u $REG_USER -p $REG_PASS $REGISTRY_URL
-          buildah push --tls-verify=false --storage-driver=vfs $REGISTRY_URL/$IMG_PATH:$IMG_TAG docker://$REGISTRY_URL/$IMG_PATH:$IMG_TAG
-        env:
-          - name: REGISTRY_URL
-            value: core.hr.172.22.11.16.nip.io
-          - name: IMG_PATH
-            value: shinhan-bookinfo/bookinfo-core
-          - name: REG_USER
-            value: admin
-          - name: REG_PASS
-            value: admin
-        securityContext:
-          privileged: true
-        after:
-          - s2i-gradle-generate
-        when:
-          tag:
-            - v.*
-      - name: image-scan
-        image: docker.io/bitnami/trivy:latest
-        script: |
-          IMG_TAG=${CI_HEAD_REF#refs/tags/}
-
-          TRIVY_INSECURE=true trivy image $REGISTRY_URL/$IMG_PATH:$IMG_TAG
-        env:
-          - name: REGISTRY_URL
-            value: core.hr.172.22.11.16.nip.io
-          - name: IMG_PATH
-            value: shinhan-bookinfo/bookinfo-core
-        securityContext:
-          privileged: true
-        after:
-          - build-and-push
-        when:
-          tag:
-            - v.*
+  clustertemplate:
+    metadata:
+      name: gradle-image-integrationconfig-template
+    parameters:
+      - name: CONFIG_NAME
+        value: bookinfo-rating-config
+      - name: CONFIG_SECRET
+        value: <Docker config secret name>
+      - name: GIT_TYPE
+        value: github
+      - name: GIT_REPO
+        value: tmax-cloud/bookinfo-rating
+      - name: TOKEN_SECRET_NAME
+        value: <Secret name including token info>
+      - name: PVC_NAME
+        value: rating-pvc
+      - name: SONAR_HOST_URL_TPL
+        value: <Sonarqube host url>
+      - name: SONAR_PROJECT_KEY_TPL
+        value: <Sonarqube project key>
+      - name: JAR_NAME
+        value: rating.jar
+      - name: REGISTRY_URL
+        value: <Registry URL>
+      - name: IMG_PATH
+        value: shinhan-bookinfo/bookinfo-rating
+      - name: REG_USER
+        value: <User name>
+      - name: REG_PASS
+        admin: <User password>
