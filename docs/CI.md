@@ -1,7 +1,7 @@
 # Bookinfo CI
 ## 소개 및 시연 관련 설명
 * Tekton 기반의 CI Operator를 통해 마이크로서비스 <U>core, order, rating, common</U>의 소스 및 통합. 
-* Template instance의 파라미터를 정의 후 배포하는면 그에 따라 integration config가 생성되는 방식
+* Template instance의 파라미터를 정의 후 배포하면 그에 따라 integration config가 생성되는 방식
 * Repository에 Pull Request 및 Push 이벤트 발생 시 설정한 <U>Integration Config</U>에 따라 CI Operator의 파이프라인이 돌아가는 시스템
 ## Repository 구성 요소 
 * src
