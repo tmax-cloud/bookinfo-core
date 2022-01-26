@@ -252,7 +252,7 @@ s2i-gradle-generate로 생성한 Dockerfile.gen으로 이미지 빌드 및 푸�
       tag:
         - v.*
 ```
-### gradle-build-and-publish (Case 3)
+### gradle-build-and-publish (Case 2)
 소스를 빌드하여 정적분석 후 Nexus에 저장하는 Job
 - Tag 생성 (Release) 이벤트 발생 시 task 생성
 - 설정한 sonarqube 및 nexus 콘솔에서 결과 확인 가능
