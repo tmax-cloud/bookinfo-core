@@ -234,12 +234,12 @@ objects:
                 - name: sonar-settings
                   workspace: sonar-settings
             after:
-              - copy-source
+              - prepare-sonar
             when:
               branch:
                 - main
         postSubmit:
-          - name: copy-source
+          - name: prepare-sonar
             image: docker.io/alpine:3.13.6
             script: |
               cp -r ./src $(workspaces.bookinfo-workspace.path)/src
@@ -263,7 +263,7 @@ objects:
                 - name: sonar-settings
                   workspace: sonar-settings
             after:
-              - copy-source
+              - prepare-sonar
             when:
               branch:
                 - main
@@ -308,7 +308,7 @@ objects:
 apiVersion: tmax.io/v1
 kind: TemplateInstance
 metadata:
-  name: bookinfo-rating-ic-instance
+  name: bookinfo-core-ic-instance
   namespace: default
 spec:
   clustertemplate:
@@ -322,7 +322,7 @@ spec:
       - name: GIT_TYPE
         value: github
       - name: GIT_REPO
-        value: tmax-cloud/bookinfo-rating
+        value: tmax-cloud/bookinfo-core
       - name: TOKEN_SECRET_NAME
         value: <Secret name including token info>
       - name: PVC_NAME
@@ -336,7 +336,7 @@ spec:
       - name: REGISTRY_URL
         value: <Registry URL>
       - name: IMG_PATH
-        value: shinhan-bookinfo/bookinfo-rating
+        value: shinhan-bookinfo/bookinfo-core
       - name: REG_USER
         value: <User name>
       - name: REG_PASS
