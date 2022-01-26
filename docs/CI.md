@@ -111,6 +111,46 @@ parameters:
     required: true
     valueType: string
 ```
+## Template Instance 예시
+해당 형식에 맞춰 manifest apply 시 template operator가 integrationConfig 생성
+```yaml
+apiVersion: tmax.io/v1
+kind: TemplateInstance
+metadata:
+  name: bookinfo-rating-ic-instance
+  namespace: default
+spec:
+  clustertemplate:
+    metadata:
+      name: gradle-image-integrationconfig-template
+    parameters:
+      - name: CONFIG_NAME
+        value: bookinfo-rating-config
+      - name: CONFIG_SECRET
+        value: <Docker config secret name>
+      - name: GIT_TYPE
+        value: github
+      - name: GIT_REPO
+        value: tmax-cloud/bookinfo-rating
+      - name: TOKEN_SECRET_NAME
+        value: <Secret name including token info>
+      - name: PVC_NAME
+        value: rating-pvc
+      - name: SONAR_HOST_URL_TPL
+        value: <Sonarqube host url>
+      - name: SONAR_PROJECT_KEY_TPL
+        value: <Sonarqube project key>
+      - name: JAR_NAME
+        value: rating.jar
+      - name: REGISTRY_URL
+        value: <Registry URL>
+      - name: IMG_PATH
+        value: shinhan-bookinfo/bookinfo-rating
+      - name: REG_USER
+        value: <User name>
+      - name: REG_PASS
+        admin: <User password>
+```
 
 ## Integration Config Job Description
 ### prepare-sonar
