@@ -1,6 +1,6 @@
 # Bookinfo CI
 ## Integration Config Core Concepts 
-* clusterTemplate 정의 (내부 ci/cd에서 사용할 변수 정의) --> templateInstance 생성 (실제 변수값 입력) --(tmax templateOperator)--> integrationConfig 생성 --> git push or pull request 이벤트 발생 --(tmax ci/cd operator)--> PipelineRun 실행 --(tekton operator)--> TaskRun 실행 --> pod 생성 및 step 수행
+* clusterTemplate 정의(내부 ci/cd에서 사용할 변수 정의) --> templateInstance 생성(실제 변수값 입력) --(tmax templateOperator)--> integrationConfig 생성 --> git push or pull request 이벤트 발생 --(tmax ci/cd operator)--> PipelineRun 실행 --(tekton operator)--> TaskRun 실행 --> pod 생성 및 step 수행
 
 ## 소개 및 시연 관련 설명
 * Tekton 기반의 CI Operator를 통해 마이크로서비스 <U>core, order, rating, common</U>의 소스 및 통합. 
