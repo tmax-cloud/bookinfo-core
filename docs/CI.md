@@ -49,6 +49,25 @@
    * Case 3. Maven 빌드 시나리오: 
      * 빌드 (Maven) -> 이미지 빌드 및 푸시 (Buildah) -> 이미지 스캔 (Trivy)
      * https://github.com/changju-test/echo_maven/blob/master/maven.yaml
+
+## IntegrationConfig 가이드
+### Access Token 설정
+1. Git Repo에 권한이 있는 계정의 token 생성 - [가이드](https://github.com/tmax-cloud/cicd-operator/blob/master/docs/quickstart.md#create-bot-account-and-token)
+2. Token Secret 생성
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <Secret Name>
+stringData:
+  token: <Token From Git Repository>
+```
+### Webhook Host Name 설정
+1. Configmap 설정
+```bash
+kubectl 
+```
+
 ## Template Parameters
 template operator 를 이용하여 인스턴스 생성 시 사용자가 지정해야하는 파라미터 정보
 ```yaml
