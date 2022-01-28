@@ -69,7 +69,7 @@
 2. PR 통과되어 merge 시: 정적분석
 3. Release (tag 형식 v.*) 시:
    * Gradle 빌드 -> 이미지 빌드 및 푸시 (Buildah) -> 이미지 스캔 (Trivy) -> 클러스터 배포
-     * https://github.com/tmax-cloud/bookinfo-core/blob/main/core-config.yaml
+     * https://github.com/tmax-cloud/bookinfo-core/blob/docs/core-config.yaml
 ---
 ## Setup
 
