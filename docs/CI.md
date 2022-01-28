@@ -83,7 +83,7 @@
 ## IntegrationConfig 가이드
 
 - 작업 순서:
-  - 1. CICD-Operator 생성하기
+  - 1. CICD-Operator 설정 수정하기
     2. integrationConfig를 위한 Template 작성하기
        - 파라미터 및 integrationConfig 설정 기입
     3. Template Instance 생성하기
@@ -464,3 +464,8 @@ bookinfo 프로젝트에서 사용되는 job list
 
 
 
+- 참조 - [콘솔 UI 통한 integrationConfig 생성 방법](#./console-ui.md)
+
+  
+
+  
