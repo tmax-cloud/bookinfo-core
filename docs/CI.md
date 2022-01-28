@@ -334,7 +334,7 @@ bookinfo 프로젝트에서 사용되는 job list
 
 - [prepare-sonar](#prepare-sonar)
 - [code-analysis](#code-analysis)
-- [gradle-package](# gradle-package)
+- [gradle-package](#gradle-package)
 - [build-and-push](#build-and-push)
 - [image-scan](#image-scan)
 
