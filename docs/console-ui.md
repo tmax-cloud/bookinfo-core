@@ -14,37 +14,32 @@
 
 ![ns-config](https://user-images.githubusercontent.com/25574165/151495791-426a1c50-e5fc-4637-9c87-129fc9935f56.PNG)
 
-### step 2.  task 파라미터 지정
+### step 2. Step 설정
 
-- task에서 사용될 파라미터 설정
+- 기입 항목: Task에서 실행될 image 정보, Script 혹은 command,  환경 변수 기입
 
-![2task-parameter_setting](https://user-images.githubusercontent.com/25574165/151495900-feb4627a-60de-4b46-92ea-8c512f53409b.PNG)
-
-### step 3. Step 설정
-
-- Task에서 실행될 image 정보, Script 혹은 command 작성 
-
-![2 step-setting](https://user-images.githubusercontent.com/25574165/151495951-2e6bbc91-00cd-49ef-8861-43308fe2040c.PNG)
+![2 step-setting](https://user-images.githubusercontent.com/25574165/151501491-d79cb10f-124b-4953-be33-5fc4beb47459.PNG)
 
 ### 생성완료 화면
 
-![list](https://user-images.githubusercontent.com/25574165/151496053-3282d630-2246-4ed2-afec-0550e7af947d.PNG)
+![list](https://user-images.githubusercontent.com/25574165/151501585-5883e75f-4cb0-4667-8059-21f4bca2a854.PNG)
 
 ---
 
 ## 파이프라인 생성
 
-### step 1. 파이프라인에서 사용되는 모든 파라미터 정보 기입
+### step 1. 파이프라인 파라미터 및 리소스 기입 
 
-![pipline](https://user-images.githubusercontent.com/25574165/151496128-081ec514-fbfa-4a89-a919-fc1156c173f2.PNG)
+- 파이프라인에서 사용될 파라미터 및 리소스 작성
+- Bookinfo 프로젝트에서는 사용하지 않음 
 
 ### step 2. 워크스페이스 및 task 배치 
 
-- task는병렬, 순차 배치 가능 (태스크 선택 후 `+` 버튼 클릭)
+- task는병렬, 순차 배치 가능 (태스크 선택 후 `+` 버튼 클릭) 
 
-![pipeline2](https://user-images.githubusercontent.com/25574165/151496359-562399a3-19dd-4c01-9323-0980f139caf2.PNG)
+![pipe](https://user-images.githubusercontent.com/25574165/151501813-7d6a23db-2fa4-40bc-a18d-9ae320417a31.PNG)
 
-### 생성완료 화면
+### 최종 생성 완료 화면
 
-![생성완료](https://user-images.githubusercontent.com/25574165/151496419-2d6c933b-7c1f-4e1b-8029-f89aa76a3299.PNG)
+![done](https://user-images.githubusercontent.com/25574165/151501890-bbc695c9-de85-4853-b811-e103694c3a35.PNG)
 
