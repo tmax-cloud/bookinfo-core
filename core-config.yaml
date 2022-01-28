@@ -98,11 +98,6 @@ parameters:
     description: Integration Config Name
     required: true
     valueType: string
-  - name: CONFIG_SECRET
-    displayName: ConfigSecret
-    description: Secret to be included in Service Account (Usually docker hub secret)
-    required: false
-    valueType: string
   - name: GIT_TYPE
     displayName: GitType
     description: Git repo type (github/gitlab)
@@ -191,14 +186,15 @@ objects:
               name: ${TOKEN_SECRET_NAME}
               key: token
       workspaces:
-        - name: bookinfo-workspace
+        - name: gradle-workspace
           persistentVolumeClaim:
             claimName: ${PVC_NAME}
         - name: sonar-settings
           configMap:
             name: sonar-properties
-      secrets:
-        - name: ${CONFIG_SECRET}
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
       mergeConfig:
         method: squash
         query:
@@ -213,7 +209,7 @@ objects:
           - name: prepare-sonar
             image: docker.io/alpine:3.13.6
             script: |
-              cp -r ./src $(workspaces.bookinfo-workspace.path)/src
+              cp -r ./src $(workspaces.gradle-workspace.path)/src
             when:
               branch:
                 - main
@@ -230,7 +226,7 @@ objects:
                   stringVal: ${SONAR_PROJECT_KEY_TPL}
               workspaces:
                 - name: source-dir
-                  workspace: bookinfo-workspace
+                  workspace: gradle-workspace
                 - name: sonar-settings
                   workspace: sonar-settings
             after:
@@ -242,7 +238,7 @@ objects:
           - name: prepare-sonar
             image: docker.io/alpine:3.13.6
             script: |
-              cp -r ./src $(workspaces.bookinfo-workspace.path)/src
+              cp -r ./src $(workspaces.gradle-workspace.path)/src
             when:
               branch:
                 - main
@@ -259,7 +255,7 @@ objects:
                   stringVal: ${SONAR_PROJECT_KEY_TPL}
               workspaces:
                 - name: source-dir
-                  workspace: bookinfo-workspace
+                  workspace: gradle-workspace
                 - name: sonar-settings
                   workspace: sonar-settings
             after:
@@ -267,28 +263,27 @@ objects:
             when:
               branch:
                 - main
-          - name: s2i-gradle-generate
-            image: docker.io/tmaxcloudck/cicd-util:5.0.5
+          - name: gradle-package
+            image: docker.io/gradle:7.3.1-jdk11
+            script: |
+              gradle build
+              cp build/libs/${JAR_NAME} $(workspaces.gradle-workspace.path)/${JAR_NAME}
             when:
               tag:
                 - v.*
-            script: |
-              /usr/local/bin/s2i \
-              build . docker.io/changjjjjjjjj/s2i-gradle-java:dev \
-              --env JAR_NAME=${JAR_NAME} \
-              --tlsverify=false \
-              --as-dockerfile $(workspaces.bookinfo-workspace.path)/Dockerfile.gen
           - name: build-and-push
             image: quay.io/buildah/stable
             script: |
               IMG_TAG=${CI_HEAD_REF#refs/tags/}
-              buildah bud --tls-verify=false --storage-driver=vfs --format docker -f $(workspaces.bookinfo-workspace.path)/Dockerfile.gen -t ${REGISTRY_URL}/${IMG_PATH}:$IMG_TAG $(workspaces.bookinfo-workspace.path)
+              cp $(workspaces.gradle-workspace.path)/${JAR_NAME} ./
+
+              buildah bud --tls-verify=false --storage-driver=vfs --format docker -f Dockerfile -t ${REGISTRY_URL}/${IMG_PATH}:$IMG_TAG
               buildah login --tls-verify=false -u ${REG_USER} -p ${REG_PASS} ${REGISTRY_URL}
               buildah push --tls-verify=false --storage-driver=vfs ${REGISTRY_URL}/${IMG_PATH}:${IMG_TAG} docker://${REGISTRY_URL}/${IMG_PATH}:$IMG_TAG
             securityContext:
               privileged: true
             after:
-              - s2i-gradle-generate
+              - gradle-package
             when:
               tag:
                 - v.*
@@ -299,6 +294,16 @@ objects:
               TRIVY_INSECURE=true trivy image ${REGISTRY_URL}/${IMG_PATH}:${IMG_TAG}
             securityContext:
               privileged: true
+            after:
+              - build-and-push
+            when:
+              tag:
+                - v.*
+          - name: deploy
+            image: docker.io/bitnami/kubectl:latest
+            script: |
+              cp $(workspaces.kubeconfig.path)/kubeconfig /.kube/config
+              kubectl apply -f release.yaml
             after:
               - build-and-push
             when:
